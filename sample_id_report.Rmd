@@ -1,0 +1,89 @@
+---
+title: "Infectious Disease Sample Report"
+date: "`r Sys.Date()`"
+output: html_document
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(readr)
+library(sf)
+library(dplyr)
+library(RColorBrewer)
+```
+
+# Executive Summary
+This report presents an analysis of infectious disease surveillance in the Philippines. It includes total cases by disease and weekly trends.
+
+```{r}
+# Load and Prepare Data
+# Simulated example: Replace this with your actual DOH dataset CSV
+# Example: disease_data <- read_csv("doh_weekly_cases.csv")
+set.seed(123)
+
+# Simulate weekly data for demonstration
+diseases <- c("Dengue", "Measles")
+
+date_seq <- seq(as.Date("2024-01-01"), as.Date("2024-12-31"), by = "week")
+
+disease_data <- expand.grid(
+  date = date_seq,
+  disease = diseases
+)
+
+disease_data$cases <- sample(0:100, nrow(disease_data), replace = TRUE)
+
+# Create a weekly summary
+disease_data_weekly <- disease_data %>%
+  group_by(week = floor_date(date, "week"), disease) %>%
+  summarise(total_cases = sum(cases), .groups = "drop")
+```
+
+# Text Summary
+```{r}
+# Calculate the most reported disease
+top_disease <- disease_data_weekly %>%
+  group_by(disease) %>%
+  summarise(total = sum(total_cases)) %>%
+  arrange(desc(total)) %>%
+  slice(1)
+
+# Find the peak week
+peak_week <- disease_data_weekly %>%
+  arrange(desc(total_cases)) %>%
+  slice(1)
+```
+As of `r Sys.Date()`, the most reported disease is `r top_disease$disease` with a total of `r format(top_disease$total, big.mark = ",")` cases.
+
+The peak week was the week of `r format(peak_week$week, "%B %d, %Y")`, when `r format(peak_week$total_cases, big.mark = ",")` cases of `r peak_week$disease` were reported.
+
+# Bar Chart: Total Cases by Disease
+```{r}
+# Total cases by disease
+total_cases_by_disease <- disease_data %>%
+  group_by(disease) %>%
+  summarise(total = sum(cases))
+
+# Plot the bar chart
+ggplot(total_cases_by_disease, aes(x = disease, y = total, fill = disease)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total Reported Cases by Disease", y = "Total Cases", x = "") +
+  theme_minimal()
+```
+
+# Time Series Plot: Weekly Trends
+```{r}
+# Weekly trends of cases
+ggplot(disease_data_weekly, aes(x = week, y = total_cases, color = disease)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Weekly Reported Cases of Infectious Diseases",
+       x = "Week",
+       y = "Total Cases") +
+  theme_minimal() +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
